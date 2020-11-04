@@ -16,18 +16,24 @@ const int shifterUpButtonMap = 2;
 const int shifterDownButtonMap = 3;
 
 /* BUTTONS DEFINITION */
-byte buttons[NUMROWS][NUMCOLS] = {{0,1,2},{3,4,5},{6,7,8},{9,10,11}};
+byte buttons[NUMROWS][NUMCOLS] = {{0,1,2}, {3,4,5}, {6,7,8}, {9,10,11}};
 byte rowPins[NUMROWS] = {A2,A1,A0,15}; 
 byte colPins[NUMCOLS] = {14,16,10}; 
 Keypad keypad = Keypad(makeKeymap(buttons), rowPins, colPins, NUMROWS, NUMCOLS); 
 
 /* ROTARIES DEFINITION */
-struct rotariesdef {
+struct Rotary {
   byte pin1;
   byte pin2;
   int ccwchar;
   int cwchar;
   volatile unsigned char state;
+};
+
+Rotary rotaries[NUMROTARIES] {
+  {4,5,12,13,0},
+  {6,7,14,15,0},
+  {8,9,16,17,0}
 };
 
 #define DIR_CCW 0x10
@@ -41,18 +47,12 @@ struct rotariesdef {
 #define R_CW_BEGIN_M 0x4
 #define R_CCW_BEGIN_M 0x5
 const unsigned char ttable[6][4] = {
-  // R_START (00)
-  {R_START_M,            R_CW_BEGIN,     R_CCW_BEGIN,  R_START},
-  // R_CCW_BEGIN
-  {R_START_M | DIR_CCW, R_START,        R_CCW_BEGIN,  R_START},
-  // R_CW_BEGIN
-  {R_START_M | DIR_CW,  R_CW_BEGIN,     R_START,      R_START},
-  // R_START_M (11)
-  {R_START_M,            R_CCW_BEGIN_M,  R_CW_BEGIN_M, R_START},
-  // R_CW_BEGIN_M
-  {R_START_M,            R_START_M,      R_CW_BEGIN_M, R_START | DIR_CW},
-  // R_CCW_BEGIN_M
-  {R_START_M,            R_CCW_BEGIN_M,  R_START_M,    R_START | DIR_CCW},
+  {R_START_M,           R_CW_BEGIN,     R_CCW_BEGIN,  R_START},           // R_START (00)
+  {R_START_M | DIR_CCW, R_START,        R_CCW_BEGIN,  R_START},           // R_CCW_BEGIN
+  {R_START_M | DIR_CW,  R_CW_BEGIN,     R_START,      R_START},           // R_CW_BEGIN
+  {R_START_M,           R_CCW_BEGIN_M,  R_CW_BEGIN_M, R_START},           // R_START_M (11)
+  {R_START_M,           R_START_M,      R_CW_BEGIN_M, R_START | DIR_CW},  // R_CW_BEGIN_M
+  {R_START_M,           R_CCW_BEGIN_M,  R_START_M,    R_START | DIR_CCW}, // R_CCW_BEGIN_M
 };
 #else
 #define R_CW_FINAL 0x1
@@ -62,29 +62,16 @@ const unsigned char ttable[6][4] = {
 #define R_CCW_FINAL 0x5
 #define R_CCW_NEXT 0x6
 
-const unsigned char ttable[7][4] = {
-  // R_START
-  {R_START,    R_CW_BEGIN,  R_CCW_BEGIN, R_START},
-  // R_CW_FINAL
-  {R_CW_NEXT,  R_START,     R_CW_FINAL,  R_START | DIR_CW},
-  // R_CW_BEGIN
-  {R_CW_NEXT,  R_CW_BEGIN,  R_START,     R_START},
-  // R_CW_NEXT
-  {R_CW_NEXT,  R_CW_BEGIN,  R_CW_FINAL,  R_START},
-  // R_CCW_BEGIN
-  {R_CCW_NEXT, R_START,     R_CCW_BEGIN, R_START},
-  // R_CCW_FINAL
-  {R_CCW_NEXT, R_CCW_FINAL, R_START,     R_START | DIR_CCW},
-  // R_CCW_NEXT
-  {R_CCW_NEXT, R_CCW_FINAL, R_CCW_BEGIN, R_START},
+const unsigned char ttable[7][4] = {  
+  {R_START,    R_CW_BEGIN,  R_CCW_BEGIN, R_START},           // R_START  
+  {R_CW_NEXT,  R_START,     R_CW_FINAL,  R_START | DIR_CW},  // R_CW_FINAL  
+  {R_CW_NEXT,  R_CW_BEGIN,  R_START,     R_START},           // R_CW_BEGIN  
+  {R_CW_NEXT,  R_CW_BEGIN,  R_CW_FINAL,  R_START},           // R_CW_NEXT  
+  {R_CCW_NEXT, R_START,     R_CCW_BEGIN, R_START},           // R_CCW_BEGIN  
+  {R_CCW_NEXT, R_CCW_FINAL, R_START,     R_START | DIR_CCW}, // R_CCW_FINAL  
+  {R_CCW_NEXT, R_CCW_FINAL, R_CCW_BEGIN, R_START},           // R_CCW_NEXT
 };
 #endif
-
-rotariesdef rotaries[NUMROTARIES] {
-  {4,5,12,13,0},
-  {6,7,14,15,0},
-  {8,9,16,17,0}
-};
 
 Joystick_ Joystick(
   JOYSTICK_DEFAULT_REPORT_ID,
@@ -100,7 +87,6 @@ void setup() {
   pinMode(shifterDownButtonMap, INPUT_PULLUP);
   
   SetupRotaries();
-
   Joystick.begin();  
 }
 
